@@ -30,14 +30,15 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = file("${path.module}/key.pub")
+  public_key = file("/home/wright/.ssh/drift_key.pub")   # changed
 }
 
 resource "aws_instance" "example" {
   ami                    = data.aws_ami.ubuntu.id
   key_name               = aws_key_pair.deployer.key_name
   instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.sg_ssh.id]
+  #vpc_security_group_ids = [aws_security_group.sg_ssh.id]  # delete
+  vpc_security_group_ids = [aws_security_group.sg_ssh.id, aws_security_group.sg_web.id]  # added
   user_data              = <<-EOF
               #!/bin/bash
               echo "Hello, World" > index.html
@@ -58,3 +59,19 @@ resource "aws_security_group" "sg_ssh" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+# Changed (added) from here to end as one step in the tutorial
+resource "aws_security_group" "sg_web" {
+  name        = "sg_web"
+  description = "allow 8080"
+}
+
+resource "aws_security_group_rule" "sg_web" {
+  type      = "ingress"
+  to_port   = "8080"
+  from_port = "8080"
+  protocol  = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.sg_web.id
+}
+
